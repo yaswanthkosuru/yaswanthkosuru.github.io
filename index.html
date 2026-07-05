@@ -121,6 +121,9 @@
     .exp-step{position:sticky;top:var(--step-top)}
   }
   @media (max-width:899px){
+    /* mobile deck: cards stay in normal page flow; GSAP pins the heading and
+       then each card once it has been fully read (see the experience-deck
+       script). Without JS the cards fall back to a plain scrolling list. */
     .exp-step{position:relative}
     .gsap-on .wb-proc-inner{animation:none}
     .exp-head{position:relative;z-index:5;background:#0A0A0B;padding:12px 0 16px}
@@ -247,7 +250,7 @@
 <!-- ============================================================ SELECTED WORK — LIST ============================================================ -->
 <!-- ============================================================ EXPERIENCE — STACKING CARDS ============================================================ -->
 <section id="experience" style="position:relative;background:#0A0A0B;padding:clamp(60px,7vw,110px) clamp(24px,5vw,90px) 0">
-  <div style="max-width:1600px;margin:0 auto">
+  <div class="exp-head-wrap" style="max-width:1600px;margin:0 auto">
     <div class="exp-head">
     <div class="reveal" style="display:flex;align-items:center;gap:16px;margin-bottom:clamp(18px,2.2vw,30px)">
       <span style="width:clamp(40px,4vw,64px);height:1px;background:rgba(255,255,255,0.35)"></span>
@@ -258,8 +261,8 @@
     </div>
   </div>
 
-  <div style="max-width:1400px;margin:0 auto">
-    
+  <div class="exp-deck" style="max-width:1400px;margin:0 auto">
+
       <div class="exp-step" style="--step-top:clamp(90px,12vh,130px);padding-bottom:clamp(20px,2.4vw,34px)">
         <div class="wb-proc-inner wb-gridExp reveal-item" style="display:grid;grid-template-columns:1fr 1.35fr;min-height:clamp(400px,52vh,540px);border-radius:24px;overflow:hidden;background:#0f0f11;border:1px solid rgba(255,255,255,0.1);box-shadow:0 40px 90px -40px rgba(0,0,0,0.9)">
           <div style="position:relative;overflow:hidden;background:#0a0a0b">
@@ -970,83 +973,88 @@
       });
     });
 
-    // --- mobile experience deck: a card pins only once it has been FULLY read
-    // (CSS sticky can't express that for taller-than-viewport cards; the CSS
-    // deck stays desktop-only via the max-width:899px static override) ---
-    gsap.matchMedia().add('(max-width:899px)', function(){
-      var steps = gsap.utils.toArray('#experience .exp-step');
-      var head = document.querySelector('#experience .exp-head');
-      if(head && steps.length){
-        // section heading pins first (page order) and stays visible above the
-        // whole deck; releases after the last card has been read
-        ScrollTrigger.create({
-          trigger: head, start: 'top top',     // flush to the top — any gap above
-                                                // lets the cards behind show through
-          endTrigger: steps[steps.length - 1], end: 'bottom bottom',
-          pin: true, pinSpacing: false, anticipatePin: 1
-        });
-      }
-      // cards pin just below the pinned heading (function-based: re-measured on
-      // every ScrollTrigger refresh)
-      // cards pin flush to the heading's bottom edge — a gap here would expose
-      // the covered card behind (the head's own padding provides the breathing room)
-      var cardLine = function(){ return head ? head.offsetHeight : 0; };
-      steps.forEach(function(stepEl, i){
-        stepEl.style.zIndex = i + 1;                 // later cards cover earlier
-        if(i === steps.length - 1) return;           // last card never pins
-        ScrollTrigger.create({
-          trigger: stepEl,
-          start: function(){ return 'top ' + cardLine() + 'px'; },
-          endTrigger: steps[i + 1],                  // release the moment the NEXT card
-          end: function(){ return 'top ' + cardLine() + 'px'; }, // covers edge-to-edge
-          pin: true,
-          pinSpacing: false,
-          anticipatePin: 1,
-          // heights differ between cards, so hide the card the instant it is fully
-          // covered (nothing pokes out below shorter cards); restore the moment
-          // uncovering begins when scrolling back up
-          onLeave: function(){ gsap.set(stepEl, { autoAlpha: 0 }); },
-          onEnterBack: function(){ gsap.set(stepEl, { autoAlpha: 1 }); }
-        });
-        // depth: the covered card recedes AND fades as the next card arrives —
-        // cards differ in height, so without the fade the taller covered card
-        // pokes out below the shorter incoming one during the approach; animate
-        // the CHILD, never the pinned element itself
-        gsap.to(stepEl.querySelector('.wb-proc-inner'), {
-          scale: 0.96, autoAlpha: 0, ease: 'none',
-          scrollTrigger: {
-            trigger: steps[i+1],
-            start: 'top 75%',
-            end: function(){ return 'top ' + cardLine() + 'px'; },
-            scrub: true
-          }
-        });
-      });
-    });
+    // --- experience deck ---
+    // desktop (>=900px): CSS sticky cascade at staggered --step-top offsets;
+    // equalized card heights guarantee each card fully covers the previous one.
+    // mobile (<900px): the heading pins on top and each card pins below it only
+    // once it has been FULLY read (taller-than-screen cards keep scrolling
+    // until their bottom is visible, THEN pin). A covered card stays pinned
+    // until the whole deck ends, so the stack is always exactly aligned —
+    // nothing is ever faded or hidden, and scrolling back simply unwinds pins.
+    var expSteps = gsap.utils.toArray('#experience .exp-step');
+    var expCards = gsap.utils.toArray('#experience .wb-proc-inner');
+    var expHead = document.querySelector('#experience .exp-head');
 
-    // --- desktop experience deck: cards stick via CSS at staggered offsets, so
-    // each card must be TALLER-OR-EQUAL to the one before it to fully cover it
-    // (a taller earlier card pokes out below a shorter cover). Equalize all card
-    // heights to the tallest — the staggered offsets then guarantee full cover
-    // while keeping the top-edge cascade visible ---
-    gsap.matchMedia().add('(min-width:900px)', function(){
-      var cards = gsap.utils.toArray('#experience .wb-proc-inner');
-      if(!cards.length) return;
-      var equalize = function(){
-        cards.forEach(function(c){ c.style.height = 'auto'; });
-        var h = Math.max.apply(null, cards.map(function(c){ return c.offsetHeight; }));
-        cards.forEach(function(c){ c.style.height = h + 'px'; });
+    if(expSteps.length && expCards.length){
+      // a card must be TALLER-OR-EQUAL to the one before it to fully cover it,
+      // so equalize all card heights to the tallest (both layouts rely on this)
+      var equalizeExpCards = function(){
+        expCards.forEach(function(c){ c.style.height = 'auto'; });
+        var tallest = Math.max.apply(null, expCards.map(function(c){ return c.offsetHeight; }));
+        expCards.forEach(function(c){ c.style.height = tallest + 'px'; });
         ScrollTrigger.refresh();
       };
-      equalize();
-      window.addEventListener('load', equalize);   // re-measure after webfonts/images settle
-      window.addEventListener('resize', equalize);
-      return function(){                            // cleanup when leaving desktop widths
-        window.removeEventListener('load', equalize);
-        window.removeEventListener('resize', equalize);
-        cards.forEach(function(c){ c.style.height = ''; });
-      };
-    });
+      equalizeExpCards();
+      window.addEventListener('load', equalizeExpCards); // re-measure after webfonts/images settle
+      // width-only guard: mobile URL-bar show/hide fires height-only resizes,
+      // and refreshing pinned triggers on those causes mid-scroll jumps.
+      // Debounced past GSAP's matchMedia teardown — measuring while a
+      // breakpoint-cross is mid-revert bakes in stale heights
+      var lastViewportWidth = window.innerWidth;
+      var equalizeTimer;
+      window.addEventListener('resize', function(){
+        if(window.innerWidth === lastViewportWidth) return;
+        lastViewportWidth = window.innerWidth;
+        clearTimeout(equalizeTimer);
+        equalizeTimer = setTimeout(equalizeExpCards, 150);
+      });
+
+      gsap.matchMedia().add('(max-width:899px)', function(){
+        equalizeExpCards();   // heights may be stale from the other layout
+
+        // every card pins at the same line, flush under the pinned heading —
+        // it arrives, sits, and never moves again; the next card covers it
+        // (trade-off: on short screens the bottom of a tall card can stay
+        // below the fold, which the user prefers over the card creeping up)
+        var cardPinLine = function(){
+          return expHead ? expHead.offsetHeight : 0;
+        };
+        var lastStep = expSteps[expSteps.length - 1];
+
+        if(expHead){
+          // heading pins first (page order) and stays visible above the whole
+          // deck; it must release at the SAME position as the card pins below —
+          // held any longer, the last card visibly slides underneath it like a
+          // scroll container instead of the whole section scrolling away as one
+          ScrollTrigger.create({
+            trigger: expHead, start: 'top top',
+            endTrigger: lastStep,
+            end: function(){ return 'top ' + cardPinLine() + 'px'; },
+            pin: true, pinSpacing: false, anticipatePin: 1
+          });
+        }
+
+        expSteps.forEach(function(step, i){
+          step.style.zIndex = i + 1;             // later cards cover earlier
+          if(step === lastStep) return;          // last card never pins
+          ScrollTrigger.create({
+            trigger: step,
+            start: function(){ return 'top ' + cardPinLine() + 'px'; },
+            // stay pinned until the WHOLE deck ends — released early, a card
+            // would drift up behind its cover and peek out around the cover's
+            // rounded corners; one shared pin line + equal heights keep the
+            // covered stack exactly aligned, so no fading/hiding is needed
+            endTrigger: lastStep,
+            end: function(){ return 'top ' + cardPinLine() + 'px'; },
+            pin: true, pinSpacing: false, anticipatePin: 1
+          });
+        });
+
+        return function(){                       // cleanup when leaving mobile widths
+          expSteps.forEach(function(step){ step.style.zIndex = ''; });
+        };
+      });
+    }
 
     // recalc trigger positions once webfonts/images have settled
     window.addEventListener('load', function(){ ScrollTrigger.refresh(); });
