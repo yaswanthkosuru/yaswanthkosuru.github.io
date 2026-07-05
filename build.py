@@ -432,6 +432,7 @@ doc = f"""<!DOCTYPE html>
 <title>Yaswanth Kosuru — Full-Stack Engineer</title>
 <meta name="description" content="Yaswanth Kosuru — Full-Stack Engineer. 0-to-1 platforms, event-driven services and production LLM pipelines.">
 <meta name="author" content="Yaswanth Kosuru">
+<meta name="google-site-verification" content="OiS7a8ko6ogpKL8rozBgEm3iMq-QUfuaQ4DNl5GKrGA">
 <link rel="canonical" href="{SITE_URL}/">
 <meta name="theme-color" content="#0A0A0B">
 <link rel="icon" type="image/png" href="uploads/favicon.png">
