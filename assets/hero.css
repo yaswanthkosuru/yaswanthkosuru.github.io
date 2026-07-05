@@ -1,0 +1,363 @@
+/* ============================================================================
+   hero.css — Header + Hero, mobile-first, native CSS Grid + Flexbox only.
+   Scope: the top <section class="hero"> and its fixed nav. Nothing else on the
+   page is styled here. Layout engine: flex for 1-D stacks, grid for the 2-D
+   desktop split (copy | status card) and the card's internal rows.
+   ========================================================================== */
+
+:root{
+  --bg:#0A0A0B;
+  --accent:#C4F542;
+  --accent-dim:rgba(196,245,66,0.5);
+  --ink:#fff;
+  --mono:'Space Mono',monospace;
+  --display:'Space Grotesk',system-ui,sans-serif;
+
+  --pad-x:clamp(20px,5vw,90px);   /* hero side gutters */
+  --hero-maxw:1400px;
+  --nav-top:clamp(14px,3.2vh,34px); /* gap from viewport top to the pill  */
+  --nav-h:64px;                     /* pill height                        */
+  --nav-reserve:calc(var(--nav-top) + var(--nav-h)); /* total top reserve */
+}
+
+/* ============================ HERO SHELL ============================ */
+.hero{
+  position:relative;
+  isolation:isolate;              /* own stacking context for z-index layers */
+  min-height:100vh;
+  min-height:100svh;              /* svh stays CONSTANT while scrolling (dvh
+                                     resizes with the mobile address bar and
+                                     caused scroll jump-back)                  */
+  overflow:hidden;
+  background:var(--bg);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;         /* balanced: no dead band on tall screens   */
+  justify-content:safe center;    /* ...but never overflow upward into the name */
+  /* top padding clears the fixed nav AND the giant-name band (~2 lines of 9vw
+     type), so centered copy can never ride up into either on short phones */
+  padding:calc(var(--nav-reserve) + clamp(12px,6vh,72px) + 20vw + 12px)
+          var(--pad-x)
+          clamp(28px,6vh,60px);
+}
+
+/* container for the readable content */
+.hero-inner{
+  position:relative;
+  z-index:10;
+  width:100%;
+  max-width:var(--hero-maxw);
+  margin-inline:auto;
+  margin-top:auto;                /* mobile: seat the copy toward the bottom  */
+  display:flex;
+  flex-direction:column;
+}
+
+/* ============================ DECOR LAYERS ============================ */
+.hero-veil{
+  position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:linear-gradient(180deg,rgba(10,10,11,0.5) 0%,transparent 22%,
+             transparent 68%,rgba(10,10,11,0.85) 100%);
+}
+.hero-glow{
+  position:absolute; inset:0; z-index:2; pointer-events:none;
+  background:
+    radial-gradient(ellipse 46% 38% at 74% 22%,rgba(196,245,66,0.17),transparent 65%),
+    radial-gradient(ellipse 40% 34% at 12% 78%,rgba(160,205,50,0.11),transparent 65%);
+}
+
+/* ============================ GIANT NAME BACKDROP ============================ */
+/* Faint outlined name that lives BEHIND the copy and BELOW the nav. It is a
+   texture, not a layout element, so it never pushes or collides with content. */
+.hero-bg{
+  position:absolute;
+  z-index:0;                       /* behind .hero-inner (z-index:10) */
+  top:calc(var(--nav-reserve) + clamp(12px,6vh,72px)); /* breathing room below nav */
+  left:var(--pad-x); right:var(--pad-x);
+  display:flex; align-items:flex-start;
+  pointer-events:none; overflow:hidden;
+}
+.wb-bigname{
+  position:relative;
+  margin:0;
+  font-family:'Syne',var(--display); font-weight:800;
+  /* width-proportional: "YASWANTH" ~= 9.35x font size, so 9vw always clears
+     the gutter-bounded container; the 14vh cap keeps both lines inside the
+     top band on short/wide screens */
+  font-size:clamp(26px,min(9vw,14vh),150px);
+  line-height:0.86; letter-spacing:-0.04em;
+  white-space:nowrap;
+  color:transparent;
+  -webkit-text-stroke:1.5px rgba(255,255,255,0.16);
+  cursor:default;
+}
+/* neon spotlight layer (driven by the inline JS via --wb-* custom props) */
+.wb-bigname::before{
+  content:"YASWANTH\A KOSURU"; white-space:pre;
+  position:absolute; inset:0;
+  color:rgba(196,245,66,0.15);
+  -webkit-text-stroke:2.2px var(--accent);
+  opacity:var(--wb-o,0);
+  clip-path:inset(var(--wb-ct,0%) -120px var(--wb-cb,0%) -120px);
+  -webkit-mask-image:linear-gradient(90deg,transparent calc(var(--wb-x,-999px) - var(--wb-band,80px) * 3),black calc(var(--wb-x,-999px) - var(--wb-band,80px)),black calc(var(--wb-x,-999px) + var(--wb-band,80px)),transparent calc(var(--wb-x,-999px) + var(--wb-band,80px) * 3));
+          mask-image:linear-gradient(90deg,transparent calc(var(--wb-x,-999px) - var(--wb-band,80px) * 3),black calc(var(--wb-x,-999px) - var(--wb-band,80px)),black calc(var(--wb-x,-999px) + var(--wb-band,80px)),transparent calc(var(--wb-x,-999px) + var(--wb-band,80px) * 3));
+  pointer-events:none;
+}
+/* mobile/tablet: open up the name-line gap */
+@media (max-width:899px){
+  .wb-bigname{line-height:1.08;}
+}
+
+/* ============================ FIXED NAV ============================ */
+.site-nav{
+  position:fixed;
+  top:var(--nav-top); left:0; right:0;
+  z-index:50;
+  display:flex; justify-content:center;
+  padding-inline:clamp(12px,4vw,24px);
+  pointer-events:none;             /* only the pill is interactive */
+}
+.nav-pill{
+  pointer-events:auto;
+  position:relative;
+  display:flex; align-items:center; gap:8px;
+  width:100%; max-width:1180px;
+  min-height:var(--nav-h);
+  padding:10px;
+  background:rgba(13,13,15,0.82);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:18px;
+  backdrop-filter:blur(20px);
+  box-shadow:0 30px 70px -22px rgba(0,0,0,0.9);
+}
+
+/* brand */
+.nav-brand{
+  display:flex; align-items:center; gap:11px;
+  padding:0 6px 0 4px; text-decoration:none; margin-right:auto;
+}
+.nav-logo{
+  display:flex; align-items:center; justify-content:center;
+  width:44px; height:44px; flex:none;
+  border-radius:12px; overflow:hidden;
+  background:transparent;          /* logo PNG is transparent — no tile */
+  border:1px solid rgba(196,245,66,0.18);
+  box-shadow:0 0 34px -10px rgba(196,245,66,0.5);
+}
+.nav-logo img{width:100%; height:100%; object-fit:contain; padding:2px;}
+.nav-brand-text{display:flex; flex-direction:column; gap:2px;}
+.nav-name{font-weight:700; font-size:13.5px; letter-spacing:-0.01em; color:#fff; line-height:1;}
+.nav-role{font-family:var(--mono); font-size:11px; letter-spacing:0.18em; color:rgba(255,255,255,0.6); line-height:1;}
+
+/* the collapsible cluster: links + chip + cta */
+.nav-menu{display:flex; align-items:center; gap:10px;}
+.nav-links{display:flex; align-items:center; gap:22px; padding:0 8px;}
+.nav-link{
+  position:relative; font-size:13.5px; font-weight:500;
+  color:rgba(255,255,255,0.6); text-decoration:none; transition:color .3s;
+}
+.nav-link:hover{color:#fff;}
+.nav-link::after{
+  content:""; position:absolute; left:0; right:100%; bottom:-5px; height:1px;
+  background:var(--accent); transition:right .35s cubic-bezier(.22,1,.36,1);
+}
+.nav-link:hover::after{right:0;}
+
+.nav-chip{
+  display:flex; align-items:center; gap:8px;
+  font-family:var(--mono); font-size:11px; letter-spacing:0.14em;
+  color:var(--accent); padding:0 4px 0 6px;
+}
+.nav-chip .dot{
+  width:7px; height:7px; border-radius:50%; background:var(--accent);
+  box-shadow:0 0 12px rgba(196,245,66,0.9); animation:wb-pulse 2.2s ease-in-out infinite;
+}
+.nav-cta{
+  display:flex; align-items:center; gap:9px;
+  padding:0 22px; height:44px; flex:none;
+  border-radius:12px; background:var(--accent); color:#0A0A0B;
+  font-weight:600; font-size:14.5px; text-decoration:none;
+  box-shadow:0 0 40px -10px rgba(196,245,66,0.45);
+  transition:background .3s;
+}
+.nav-cta:hover{background:#b5e838;}
+
+/* hamburger (mobile only) */
+.nav-toggle{
+  display:flex; align-items:center; justify-content:center;
+  width:44px; height:44px; flex:none; margin-left:auto;
+  border-radius:12px; cursor:pointer;
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
+}
+.nav-toggle span, .nav-toggle span::before, .nav-toggle span::after{
+  content:""; display:block; width:18px; height:2px; border-radius:2px;
+  background:#fff; transition:transform .3s ease, opacity .2s ease;
+}
+.nav-toggle span{position:relative;}
+.nav-toggle span::before{position:absolute; top:-6px; left:0;}
+.nav-toggle span::after{position:absolute; top:6px; left:0;}
+/* animate to an X when open */
+.nav-toggle-cb:checked ~ .nav-pill .nav-toggle span{background:transparent;}
+.nav-toggle-cb:checked ~ .nav-pill .nav-toggle span::before{transform:translateY(6px) rotate(45deg);}
+.nav-toggle-cb:checked ~ .nav-pill .nav-toggle span::after{transform:translateY(-6px) rotate(-45deg);}
+
+/* --- mobile menu: dropdown panel under the pill (base = mobile-first) --- */
+.nav-menu{
+  position:absolute; top:calc(100% + 10px); left:0; right:0;
+  flex-direction:column; align-items:stretch; gap:14px;
+  padding:16px;
+  background:rgba(13,13,15,0.96);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:16px;
+  backdrop-filter:blur(20px);
+  box-shadow:0 30px 70px -22px rgba(0,0,0,0.9);
+  /* collapsed state */
+  opacity:0; visibility:hidden; transform:translateY(-8px);
+  transition:opacity .25s ease, transform .25s ease, visibility .25s;
+}
+.nav-menu .nav-links{flex-direction:column; align-items:stretch; gap:4px; padding:0;}
+.nav-menu .nav-link{padding:10px 4px; font-size:16px; color:rgba(255,255,255,0.85);}
+.nav-menu .nav-chip{padding:6px 4px;}
+.nav-menu .nav-cta{justify-content:center; height:50px;}
+.nav-toggle-cb:checked ~ .nav-pill .nav-menu{
+  opacity:1; visibility:visible; transform:translateY(0);
+}
+
+/* ============================ HERO COPY ============================ */
+.hero-copy{
+  display:flex; flex-direction:column;
+  gap:clamp(18px,2.4vh,26px);
+  max-width:720px;
+}
+.hero-eyebrow{
+  margin:0;
+  font-family:var(--mono); font-size:clamp(11px,1.1vw,13px);
+  letter-spacing:0.2em; color:var(--accent);
+}
+.hero-title{
+  margin:0;
+  font-family:var(--display); font-weight:700;
+  font-size:clamp(28px,4.6vw,54px);
+  line-height:1.05; letter-spacing:-0.02em;
+  max-width:22ch;
+}
+.hero-title .accent{color:var(--accent);}
+
+.hero-actions{display:flex; flex-wrap:wrap; gap:14px;}
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  height:56px; padding:0 28px; border-radius:14px;
+  font-weight:600; font-size:16px; text-decoration:none;
+  transition:transform .35s cubic-bezier(.22,1,.36,1),background .35s,border-color .35s,box-shadow .35s;
+}
+.btn-primary{position:relative; overflow:hidden; background:var(--accent); color:#0A0A0B;}
+.btn-primary .dots{
+  position:absolute; left:12px; top:12px; width:24px; height:24px; opacity:0.25;
+  background-image:radial-gradient(circle,#0A0A0B 1px,transparent 1px); background-size:5px 5px;
+}
+.btn-primary:hover{transform:translateY(-2px); box-shadow:0 16px 40px -12px rgba(196,245,66,0.4);}
+.btn-ghost{
+  background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.1);
+  color:#fff; font-weight:500;
+}
+.btn-ghost .sq{width:11px; height:11px; background:var(--accent); border-radius:2px;}
+.btn-ghost:hover{border-color:rgba(196,245,66,0.4); background:rgba(255,255,255,0.04); transform:translateY(-2px);}
+
+.hero-stats{
+  display:flex; flex-wrap:wrap; align-items:center;
+  gap:clamp(14px,2vw,28px);
+}
+.hero-stat{font-family:var(--mono); font-size:11px; letter-spacing:0.14em; color:rgba(255,255,255,0.65);}
+.hero-stat b{color:#fff; font-weight:700; font-size:17px;}
+.hero-dot{width:5px; height:5px; background:var(--accent-dim); border-radius:1px;}
+
+/* full-width stacked buttons on the smallest screens */
+@media (max-width:440px){
+  .hero-actions{flex-direction:column; align-items:stretch;}
+  .btn{width:100%;}
+}
+
+/* ============================ STATUS CARD ("CURRENTLY") ============================ */
+.hero-card{display:none;}          /* hidden until >=1160 (see desktop block) */
+.hero-card-inner{
+  border:1px solid rgba(255,255,255,0.1); border-radius:18px;
+  background:rgba(13,13,15,0.72); backdrop-filter:blur(12px);
+  padding:clamp(20px,1.8vw,28px);
+}
+.hero-card-photo{position:relative; padding:0; overflow:hidden; aspect-ratio:3/4; max-width:340px;}
+.hero-card-photo img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;}
+.hero-card-shade{position:absolute; inset:0; background:linear-gradient(180deg,transparent 55%,rgba(10,10,11,0.88) 92%);}
+.hero-card-photo .hero-card-foot{position:absolute; left:18px; right:18px; bottom:14px; padding-top:0;}
+.hero-card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
+.hero-card-head span:first-child{font-family:var(--mono); font-size:11px; letter-spacing:0.22em; color:rgba(255,255,255,0.6);}
+.hero-card-head .dot{width:7px; height:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 12px rgba(196,245,66,0.9); animation:wb-pulse 2.2s ease-in-out infinite;}
+.hero-card-row{
+  display:grid; grid-template-columns:64px 1fr; gap:12px; align-items:baseline;
+  padding:11px 0; border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.hero-card-row dt{font-family:var(--mono); font-size:11px; letter-spacing:0.14em; color:rgba(255,255,255,0.6); margin:0;}
+.hero-card-row dd{font-size:13.5px; font-weight:500; color:rgba(255,255,255,0.9); margin:0;}
+.hero-card-foot{display:flex; align-items:center; gap:9px; padding-top:14px;}
+.hero-card-foot .on{font-family:var(--mono); font-size:11px; letter-spacing:0.14em; color:var(--accent);}
+.hero-card-foot .sep{width:4px; height:4px; background:var(--accent-dim); border-radius:1px;}
+.hero-card-foot .loc{font-family:var(--mono); font-size:11px; letter-spacing:0.14em; color:rgba(255,255,255,0.62);}
+
+/* ============================ CORNER META / SOCIAL / SCROLL ============================ */
+.hero-social{
+  position:absolute; z-index:30; right:clamp(14px,1.6vw,26px); top:50%; transform:translateY(-50%);
+  display:none; flex-direction:column; gap:12px;
+}
+.hero-fab{
+  display:flex; align-items:center; justify-content:center; width:52px; height:52px;
+  border-radius:13px; background:rgba(14,14,16,0.72); border:1px solid rgba(255,255,255,0.08);
+  backdrop-filter:blur(10px); color:#fff;
+  transition:transform .4s cubic-bezier(.22,1,.36,1),border-color .4s,background .4s;
+}
+.hero-fab:hover{transform:translateX(-7px); border-color:rgba(196,245,66,0.55); background:rgba(196,245,66,0.1);}
+.hero-scroll{
+  position:absolute; z-index:20; left:0; right:0; bottom:20px;
+  display:none; flex-direction:column; align-items:center; gap:8px;
+  font-family:var(--mono); font-size:11px; letter-spacing:0.24em; color:rgba(255,255,255,0.55);
+  pointer-events:none;
+}
+.hero-scroll span{width:1px; height:30px; background:linear-gradient(180deg,rgba(196,245,66,0.6),transparent);}
+
+/* ============================ RESPONSIVE STEPS (mobile-first) ============================ */
+
+/* >=900px: inline nav (no hamburger), reveal social rail + scroll cue */
+@media (min-width:900px){
+  .nav-toggle{display:none;}
+  .nav-pill{gap:6px;}
+  .nav-menu{
+    position:static; flex-direction:row; align-items:center; gap:10px;
+    padding:0; background:none; border:0; border-radius:0; backdrop-filter:none;
+    box-shadow:none; opacity:1; visibility:visible; transform:none;
+  }
+  .nav-menu .nav-links{flex-direction:row; align-items:center; gap:22px; padding:0 8px;}
+  .nav-menu .nav-link{padding:0; font-size:13.5px; color:rgba(255,255,255,0.6);}
+  .nav-menu .nav-chip{padding:0 12px 0 2px;}
+  .nav-menu .nav-cta{padding:0 22px; height:44px;}
+  /* dividers between clusters */
+  .nav-menu::before, .nav-links::after{
+    content:""; width:1px; height:26px; background:rgba(255,255,255,0.09);
+  }
+  .hero-social{display:flex;}
+  .hero-scroll{display:flex;}
+    .hero-inner{margin-top:0;}      /* desktop flex-end handles placement */
+  /* desktop: editorial bottom-anchored copy; the giant name owns the top band
+     (vh-capped name font keeps it clear — no vw band reserve needed here) */
+  .hero{
+    justify-content:flex-end;
+    padding-top:calc(var(--nav-reserve) + clamp(20px,5vh,48px));
+  }
+}
+
+/* >=1160px: two-column hero with the status card; larger giant name */
+@media (min-width:1160px){
+  .hero-inner{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) clamp(300px,24vw,380px);
+    align-items:end; gap:clamp(32px,4vw,64px);
+  }
+  .hero-card{display:block; align-self:end;}
+}
