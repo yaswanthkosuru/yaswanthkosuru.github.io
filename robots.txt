@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://yaswanthkosuru.github.io/sitemap.xml

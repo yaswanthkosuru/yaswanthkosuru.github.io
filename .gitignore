@@ -1,0 +1,17 @@
+# local tooling
+.agents/
+.claude/
+.playwright-mcp/
+skills-lock.json
+
+# backups & unused originals
+index.html.bak
+assets/hero.css.bak
+images.heic
+WhatsApp Image*.jpeg
+excalidraw.log
+.DS_Store
+
+# downloaded fonts — personal-use license, not redistributable (site uses Google Fonts)
+Neue-Machina-Font-Family/
+monumentextended-freeforpersonaluse/
